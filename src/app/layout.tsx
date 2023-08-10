@@ -18,7 +18,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
          <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript">  
-     </script>
+      </script>
       </head>
       <body className={inter.className}>{children}</body>
     </html>

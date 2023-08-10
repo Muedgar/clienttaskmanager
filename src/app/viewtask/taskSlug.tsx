@@ -4,7 +4,8 @@ import React, { useEffect, useId, useState } from "react"
 import { CldUploadWidget } from 'next-cloudinary';
 import Link from "next/link";
 
-export default function CreateTask() {
+export default function ViewTask() {
+   
   // ids
   let collaboratorId = useId()
   let assigneeId = useId()
@@ -80,7 +81,7 @@ export default function CreateTask() {
   // call users
   let callUsers = "call users"
 
-  const [users, setUsers] = useState([])
+  const [users, setUsers] = useState<any>([])
 
   useEffect(() => {
     async function getData(){
@@ -164,9 +165,13 @@ const handleTask = async () => {
     attached: info,
   }
   console.log(data)
+  if(!updateThisUser) {
+    alert("Something went wrong")
+    return
+  }
   
- await fetch("http://localhost:3004/task", {
-    method: "POST",
+ await fetch("http://localhost:3004/task/"+updateThisUser, {
+    method: "PATCH",
     mode: "cors", 
     cache: "no-cache", 
     credentials: "include", 
@@ -177,16 +182,59 @@ const handleTask = async () => {
     body: JSON.stringify(data), 
   }).then(d => d.json())
   .then(d => {
-    alert("Successfully created task")
+    alert("Successfully updated task")
   })
 }
 
-const [startDate, setStartDate] = useState('')
-const [endDate, setEndDate] = useState('')
+const [startDate, setStartDate] = useState<any>('')
+const [endDate, setEndDate] = useState<any>('')
+
+const [updateThisUser, setUpdateThisUser] = useState('')
+//  get single task
+let singletask = "get"
+useEffect(() => {
+  async function getData() {
+    await fetch("http://localhost:3004/task/"+localStorage.getItem("currentview"))
+      .then(d => d.json())
+      .then(d => {
+        setUpdateThisUser(d.id)
+        setName(d.name)
+        let start = new Date(d.task_duration[0].split('&')[0])
+        let middle = start.getMonth().toString().length===1?`0${start.getMonth()+1}`:start.getMonth()+1
+        let last = start.getDate().toString().length===1?`0${start.getDate()}`:start.getDate()
+        setStartDate(`${start.getFullYear()}-${middle}-${last}`)
+        
+        let end = new Date(d.task_duration[0].split('&')[1])
+        
+        let middleend = end.getMonth().toString().length===1?`0${end.getMonth()+1}`:end.getMonth()+1
+        let lastend = end.getDate().toString().length===1?`0${end.getDate()}`:end.getDate()
+        let endString = `${end.getFullYear()}-${middleend}-${lastend}`
+        
+        setEndDate(endString)
+
+        //  set assignee
+        setAssigneesSelected(d.assignees[0])
+
+        setProjectVal(d.project_id.id)
+        // set collaborators array
+        setCollaborators(d.collaborators)
+        // set projects
+        // set description
+        setTaskDescription(d.description)
+        // set priority
+        setCurrentPriority(d.priority)
+        // set files array
+        updateInfo(d.attached)
+        
+      })
+      .catch(e => console.log(e))
+  }
+  getData()
+},[singletask])
   return (
     <div className='w-[80%] h-fit scroll-auto bg-orange-200 m-auto pb-[30px]'>
       <div className='w-full h-[70px] flex justify-between'>
-        <h1 className='m-[30px] font-bold text-lg'>Create task</h1>
+        <h1 className='m-[30px] font-bold text-lg'>View task</h1>
         <div className='flex'>
           <Link href={'/alltasks'} className='m-[30px] cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Close</Link>
         </div>
@@ -244,7 +292,7 @@ const [endDate, setEndDate] = useState('')
         <div className="pl-[30px] pt-[20px] w-[30%]">
         <p className="pb-2 font-bold text-md">Assignee</p>
         <select id={assigneeId} value={assigneesSelected} onChange={e => setAssigneesSelected(e.target.value)} className="outline-none p-[5px] w-full focus:shadow-md focus:shadow-gray-900">
-          {users.map((user:any,ky) => (
+          {users.map((user:any,ky:any) => (
             <option key={ky} value={user.id}>{user.first_name} {user.last_name}</option>
           ))}
         </select>
@@ -279,7 +327,7 @@ const [endDate, setEndDate] = useState('')
         <div className="pl-[30px] pt-[20px] w-[30%]">
         <p className="pb-2 font-bold text-md">Collaborator</p>
         <select id={collaboratorId} value={selectedCollaborator} onChange={e => setSelectedCollaborator(e.target.value)} className="outline-none p-[5px] w-full focus:shadow-md focus:shadow-gray-900">
-          {users.map((user:any,ky) => (
+          {users.map((user:any,ky:any) => (
             <option key={ky} value={user.id}>{user.first_name} {user.last_name}</option>
           ))}
         </select>
@@ -414,8 +462,8 @@ const [endDate, setEndDate] = useState('')
           
         
         <div className='flex'>
-          <Link href={'/alltasks'} className='mt-[40px] ml-[40px] cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Cancel</Link>
-          <p onClick={handleTask} className='mt-[40px] ml-[40px] cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Submit</p>
+          <Link href={'/alltasks'} className='mt-[40px] ml-[40px] cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Go Back</Link>
+          <p onClick={handleTask} className='mt-[40px] ml-[40px] cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Update</p>
         </div>
       </div>
     </div>
