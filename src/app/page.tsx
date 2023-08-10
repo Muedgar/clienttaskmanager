@@ -1,113 +1,216 @@
-import Image from 'next/image'
+'use client'
+
+import Link from "next/link"
+import React, { useEffect, useState } from "react"
+import {utils, writeFile} from "xlsx"
+// import CreateTask from "./createtask/page"
+
 
 export default function Home() {
+
+  const [tasks, setTasks] = useState([])
+
+  let getDataOne = "once"
+
+  useEffect(() => {
+    async function getData() {
+      await fetch("http://localhost:3004/task")
+        .then(d=>d.json())
+        .then(d=>setTasks(d))
+        .catch(e=>console.log(e))
+    }
+    getData()
+  }, [getDataOne])
+
+
+  const [currentPage, setCurrentPage] = useState(1)
+  const recordsPerPage = 2
+  const lastIndex = currentPage * recordsPerPage
+  const firstIndex = lastIndex - recordsPerPage
+  const records = tasks.slice(firstIndex,lastIndex)
+  const npage = Math.ceil(tasks.length/recordsPerPage)
+  const numbers:number[] = getNumbers()
+
+  function getNumbers() {
+    // [...Array(npage+1).keys()].slice(1)
+    let arr = []
+    for(let i=0;i<npage;i++) {
+      arr.push(i+1)
+    }
+    return arr
+  }
+
+  // console.log("recordsPerPage ",recordsPerPage, "lastIndex  ", lastIndex, "firstIndex", firstIndex, "records  ", records, "npage  ", npage, "numbers  ", numbers)
+  
+  //  name
+  const [name, setName] = useState('')
+  // dates
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <>
+      <div className='w-[80%] h-fit scroll-auto bg-orange-200 m-auto pb-[30px]'>
+      <div className='w-full h-[70px] flex justify-between'>
+        <h1 className='m-[30px] font-bold text-lg'>All Tasks</h1>
+        <div className='flex'>
+          <Link href={'/createtask'} className='m-[30px] cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Create New Task</Link>
+          <p onClick={() => ExportData()} className='m-[30px] cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Download Excel Report</p>
+          <p className='m-[30px] cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Logout</p>
         </div>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
+      <div>
+        <div className="flex justify-start">
+          <input onKeyUp={handleSearchByName} value={name} onChange={e => setName(e.target.value)} className="outline-none p-[5px] w-[350px] ml-[30px] focus:shadow-md focus:shadow-gray-900" type='text' placeholder="Search by task name" />
+        <p onClick={() => createdLastComesFirst()} className='m-[10px] text-xs cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Created Last Comes First</p>
+        <p onClick={() => createdLastComesLast()} className='m-[10px] text-xs cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Created Last Comes Last</p>
+        
+        </div>
+      <div className="flex justify-start">
+         <div className="pl-[30px] pt-[20px] w-[30%]">
+          <p className="pb-2 font-bold text-md">Start Date</p>
+          <input value={startDate} onChange={e => setStartDate(e.target.value)} className="outline-none p-[5px] w-full focus:shadow-md focus:shadow-gray-900" type='date' />
+        </div>
+         <div className="pl-[30px] pt-[20px] w-[30%]">
+          <p className="pb-2 font-bold text-md">End Date</p>
+          <input value={endDate} onChange={e => setEndDate(e.target.value)} className="outline-none p-[5px] w-full focus:shadow-md focus:shadow-gray-900" type='date' />
+        </div>
+        <div className="pl-[30px] pt-[20px] w-[40%]">
+          <p onClick={() => searchByDate()} className='m-[30px] text-xs cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Get Tasks Than Must Be Completed During This Period</p>
+        </div>
+      </div>
       </div>
 
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
+      {/* all tasks */}
+      <div className="w-full h-fit mt-[10px]">
+        {records?.map((task:any,ky:any)=>(
+          <div key={ky} className="flex border-b-[1px] border-gray-700 justify-between w-[90%] m-auto bg-orange-400 hover:bg-orange-300 p-5 cursor-pointer">
+        <div className="">
+          <p className="m-1 font-serif text-emerald-900 font-bold text-lg">{task.name}</p>
+          <p className="m-1 font-serif text-black font-bold text-md">Assigned to: <span className="bg-black text-white text-sm rounded-md p-1 m-1">{task.assignees[0]}</span></p>
+          <p className="m-1 font-serif text-black font-bold text-md">Collaborators: 
+          {task.collaborators?.map((collaborator:any,k:any)=>(
+            <span key={k} className="bg-black text-white text-sm rounded-md p-1 m-1">{collaborator}</span>
+          ))}
           </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+        </div>
+        <div className='flex'>
+          <p className='m-[30px] cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>View</p>
+          <p className='m-[30px] cursor-pointer border bg-red-500 border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-red-700 hover:shadow-md hover:shadow-gray-900'>Delete</p>
+        </div>
       </div>
-    </main>
+        ))}
+      
+      </div>
+      <div className="w-full h-fit">
+        <div className="flex border-b-[1px] justify-center w-[90%] pt-[10px] m-auto  p-1 cursor-pointer">
+            <p onClick={prevPage} className='m-[30px] cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Prev</p>
+           { 
+            numbers.map((n:number,i:any) => (
+              <p onClick={() => changeCPage(n)} key={i} className={
+                currentPage===n?
+                'mt-[30px] cursor-pointer border border-zinc-950 bg-black h-fit pl-4 pr-4 relative text-white hover:text-black hover:bg-white hover:border-black hover:shadow-md hover:shadow-gray-900'
+                :
+                'mt-[30px] cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'
+              }>{n}</p>
+            ))
+           }
+          
+            <p onClick={nextPage} className='m-[30px] cursor-pointer border border-zinc-950 h-fit pl-4 pr-4 relative hover:text-white hover:bg-black hover:shadow-md hover:shadow-gray-900'>Next</p>
+          
+       </div>
+      </div>
+      </div>
+    </>
   )
+
+  function prevPage() {
+    if(currentPage !== 1) {
+      setCurrentPage(currentPage - 1)
+    }
+  }
+
+  function changeCPage(id:number) {
+    setCurrentPage(id)
+  }
+
+  function nextPage() {
+    if(currentPage !== npage) {
+      setCurrentPage(currentPage + 1)
+    }
+  }
+  function handleSearchByName(e:any) {
+    // listen for enter key
+    async function getData() {
+    if(name) {
+await fetch("http://localhost:3004/task/search/"+name)
+        .then(d=>d.json())
+        .then(d=>setTasks(d))
+        .catch(e=>console.log(e))
+
+    }else {
+await fetch("http://localhost:3004/task")
+        .then(d=>d.json())
+        .then(d=>setTasks(d))
+        .catch(e=>console.log(e))
+    }
+    
+    }
+    if(e.code === "Enter") {
+      getData()
+    }
+
+  }
+
+  async function searchByDate() {
+    if(startDate && endDate) {
+      await fetch("http://localhost:3004/task/bydate/"+startDate+"/"+endDate)
+        .then(d=>d.json())
+        .then(d=> {
+          if(d) {
+            setTasks(d)
+          }
+        })
+        .catch(e=>console.log(e))
+    }
+  }
+
+  async function createdLastComesFirst() {
+  await fetch("http://localhost:3004/task")
+        .then(d=>d.json())
+        .then(d=>setTasks(d.reverse()))
+        .catch(e=>console.log(e))
+  }
+  async function createdLastComesLast() {
+await fetch("http://localhost:3004/task")
+        .then(d=>d.json())
+        .then(d=>setTasks(d))
+        .catch(e=>console.log(e))
+  }
+
+  async function ExportData()
+    {
+      async function getData() {
+        let data:any = []
+        await fetch("http://localhost:3004/task")
+        .then(d=>d.json())
+        .then(d=>{
+          for(let i=0;i<d.length;i++) {
+            d[i].task_duration = d[i].task_duration.toString()
+            d[i].assignees = d[i].assignees.toString()
+            d[i].collaborators = d[i].collaborators.toString()
+            d[i].project_id = d[i].project_id.id
+            d[i].attached = d[i].attached.toString()
+            data.push(d[i])
+          }
+        })
+        .catch(e=>console.log(e))
+        return data
+      }
+      let filename='tasks_reports.xlsx';
+       let data:any = await getData()
+       var ws = utils.json_to_sheet(data);
+        var wb = utils.book_new();
+        utils.book_append_sheet(wb, ws, "Tasks");
+        writeFile(wb,filename)
+     }
 }
